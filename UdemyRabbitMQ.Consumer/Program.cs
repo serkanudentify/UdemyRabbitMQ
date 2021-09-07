@@ -2,9 +2,8 @@
 using RabbitMQ.Client.Events;
 using System;
 using System.Text;
-using System.Threading;
 
-namespace UdemyRabbitMQ.Subscriber
+namespace UdemyRabbitMQ.Consumer
 {
     class Program
     {
@@ -20,18 +19,17 @@ namespace UdemyRabbitMQ.Subscriber
 
 
             //Tek seferde kaç mesaj to subs
-            channel.BasicQos(0, 5, false);
+            channel.BasicQos(0, 1, false);
 
             var subscriber = new EventingBasicConsumer(channel);
 
             //false:  ise mesajı işledikten sonra silir, true ise mesajı alır almaz siler
-            channel.BasicConsume("direct-queue-Critical", false, subscriber);
+            channel.BasicConsume("direct-queue-Error", false, subscriber);
             Console.WriteLine("We are listening the queue right now!");
 
             subscriber.Received += (object sender, BasicDeliverEventArgs e) =>
             {
                 var message = Encoding.UTF8.GetString(e.Body.ToArray());
-                Thread.Sleep(1000);
                 Console.WriteLine("A message from queue: " + message);
 
                 channel.BasicAck(e.DeliveryTag, false);

@@ -5,6 +5,14 @@ using System.Text;
 
 namespace UdemyRabbitMQ.Publisher
 {
+    public enum LogNames
+    {
+        Critical = 1,
+        Error = 2,
+        Warning = 3,
+        Info = 4
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -16,18 +24,28 @@ namespace UdemyRabbitMQ.Publisher
             using var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
 
-            //Fanout EXCHANGE
-            /*
-            Fanout Exchange'de kuyruğu publisher oluşturmaz. Kuyruğu dinleyen olmadığı sürece mesajlar boşa gider.
-            SendGrid bildirim yapısı gibi. Eğer consumer exchange'i dinlerse subscriber onu dinleyen consumer'ların kuyruğuna mesajı basar.
-            Saat başı hava tahmini dağıtan bir api olsun. Sadece bağlı siteler alabilir.
-            */
-            channel.ExchangeDeclare("logs-fanout", durable: true, type: ExchangeType.Fanout);
+            var exchangeTypeName = "logs-direct";
+            channel.ExchangeDeclare(exchangeTypeName, durable: true, type: ExchangeType.Direct);
+
+
+            Enum.GetNames(typeof(LogNames)).ToList().ForEach(x =>
+            {
+                var routeKey = $"route-{x}";
+                var queueName = $"direct-queue-{x}";
+                channel.QueueDeclare(queueName, true, false, false);
+                channel.QueueBind(queueName, exchangeTypeName, routeKey);
+            });
+
+
 
             Enumerable.Range(1, 50).ToList().ForEach(x =>
             {
-                var messageBody = Encoding.UTF8.GetBytes($"Message {x}");
-                channel.BasicPublish("logs-fanout", string.Empty, null, messageBody);
+                LogNames log = (LogNames)new Random().Next(1, 5);
+                var message = $"log-type: {log}";
+                var messageBody = Encoding.UTF8.GetBytes(message);
+
+                var routeKey = $"route-{log}";
+                channel.BasicPublish(exchangeTypeName, routeKey, null, messageBody);
                 Console.WriteLine($"Log sent - {x}");
             });
         }
