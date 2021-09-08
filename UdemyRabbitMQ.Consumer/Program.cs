@@ -16,15 +16,15 @@ namespace UdemyRabbitMQ.Consumer
             //Bir bağlantı aç ve channel oluştur.
             using var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
-
-
-            //Tek seferde kaç mesaj to subs
-            channel.BasicQos(0, 1, false);
-
+            channel.BasicQos(0, 1, false); //tek seferde kaç mesaj
             var subscriber = new EventingBasicConsumer(channel);
 
+            var routeKey = "*.Error.*";
+            var queueName = channel.QueueDeclare().QueueName;
+            channel.QueueBind(queueName, "logs-topic", routeKey);
+
             //false:  ise mesajı işledikten sonra silir, true ise mesajı alır almaz siler
-            channel.BasicConsume("direct-queue-Error", false, subscriber);
+            channel.BasicConsume(queueName, false, subscriber);
             Console.WriteLine("We are listening the queue right now!");
 
             subscriber.Received += (object sender, BasicDeliverEventArgs e) =>

@@ -24,27 +24,20 @@ namespace UdemyRabbitMQ.Publisher
             using var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
 
-            var exchangeTypeName = "logs-direct";
-            channel.ExchangeDeclare(exchangeTypeName, durable: true, type: ExchangeType.Direct);
-
-
-            Enum.GetNames(typeof(LogNames)).ToList().ForEach(x =>
-            {
-                var routeKey = $"route-{x}";
-                var queueName = $"direct-queue-{x}";
-                channel.QueueDeclare(queueName, true, false, false);
-                channel.QueueBind(queueName, exchangeTypeName, routeKey);
-            });
-
-
+            var exchangeTypeName = "logs-topic";
+            channel.ExchangeDeclare(exchangeTypeName, durable: true, type: ExchangeType.Topic);
 
             Enumerable.Range(1, 50).ToList().ForEach(x =>
             {
-                LogNames log = (LogNames)new Random().Next(1, 5);
-                var message = $"log-type: {log}";
-                var messageBody = Encoding.UTF8.GetBytes(message);
+                Random rnd = new Random();
+                LogNames log1 = (LogNames)rnd.Next(1, 5);
+                LogNames log2 = (LogNames)rnd.Next(1, 5);
+                LogNames log3 = (LogNames)rnd.Next(1, 5);
+                var routeKey = $"{log1}.{log2}.{log3}";
 
-                var routeKey = $"route-{log}";
+                var message = $"{routeKey}.{x}";
+                var messageBody = Encoding.UTF8.GetBytes(message);
+                
                 channel.BasicPublish(exchangeTypeName, routeKey, null, messageBody);
                 Console.WriteLine($"Log sent - {x}");
             });
