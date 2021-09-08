@@ -1,6 +1,7 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace UdemyRabbitMQ.Consumer
@@ -19,9 +20,17 @@ namespace UdemyRabbitMQ.Consumer
             channel.BasicQos(0, 1, false); //tek seferde kaç mesaj
             var subscriber = new EventingBasicConsumer(channel);
 
-            var routeKey = "*.Error.*";
+            var exchangeTypeName = "header-exchange";
+            channel.ExchangeDeclare(exchangeTypeName, durable: true, type: ExchangeType.Headers);
+
+            Dictionary<string, object> headers = new Dictionary<string, object>();
+            headers.Add("format", "pdf");
+            headers.Add("shape", "a4");
+            headers.Add("x-match", "all");
+            //headers.Add("x-match", "any");
+
             var queueName = channel.QueueDeclare().QueueName;
-            channel.QueueBind(queueName, "logs-topic", routeKey);
+            channel.QueueBind(queueName, "header-exchange", string.Empty, headers);
 
             //false:  ise mesajı işledikten sonra silir, true ise mesajı alır almaz siler
             channel.BasicConsume(queueName, false, subscriber);

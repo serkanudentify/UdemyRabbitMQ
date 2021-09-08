@@ -1,18 +1,10 @@
 ﻿using RabbitMQ.Client;
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Text;
 
 namespace UdemyRabbitMQ.Publisher
 {
-    public enum LogNames
-    {
-        Critical = 1,
-        Error = 2,
-        Warning = 3,
-        Info = 4
-    }
-
     class Program
     {
         static void Main(string[] args)
@@ -24,23 +16,20 @@ namespace UdemyRabbitMQ.Publisher
             using var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
 
-            var exchangeTypeName = "logs-topic";
-            channel.ExchangeDeclare(exchangeTypeName, durable: true, type: ExchangeType.Topic);
+            var exchangeTypeName = "header-exchange";
+            channel.ExchangeDeclare(exchangeTypeName, durable: true, type: ExchangeType.Headers);
 
-            Enumerable.Range(1, 50).ToList().ForEach(x =>
-            {
-                Random rnd = new Random();
-                LogNames log1 = (LogNames)rnd.Next(1, 5);
-                LogNames log2 = (LogNames)rnd.Next(1, 5);
-                LogNames log3 = (LogNames)rnd.Next(1, 5);
-                var routeKey = $"{log1}.{log2}.{log3}";
+            Dictionary<string, object> headers = new Dictionary<string, object>();
+            headers.Add("format", "pdf");
+            headers.Add("shape", "a4d");
 
-                var message = $"{routeKey}.{x}";
-                var messageBody = Encoding.UTF8.GetBytes(message);
-                
-                channel.BasicPublish(exchangeTypeName, routeKey, null, messageBody);
-                Console.WriteLine($"Log sent - {x}");
-            });
+            var properties = channel.CreateBasicProperties();
+            properties.Headers = headers;
+
+            channel.BasicPublish(exchangeTypeName, string.Empty, properties, Encoding.UTF8.GetBytes("Header Message"));
+
+            Console.WriteLine("Message Sent!");
+            Console.ReadLine();
         }
     }
 }
